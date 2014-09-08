@@ -2,6 +2,7 @@ import System.Environment
 import System.IO
 import Data.Char
 import Data.List
+import Data.Maybe
 import qualified Numeric.Matrix as M
 
 -- Main Definitions
@@ -34,7 +35,7 @@ allSolutions x = firstSolution x |> derivedSolutions
 firstSolution :: Labyrinth -> Labyrinth
 firstSolution s = Labyrinth {matrix = newMatrix, steps = [(1,fstCol)] } 
   where (rows,cols) = dimensions s
-        fstCol      = (div cols 2) + (mod cols 2) -- Not so good!
+        fstCol      = firstRow s |> elemIndex empty |> fromJust |> (+) 1
         newMatrix   = changeValue (matrix s) (1,fstCol) step
 
 derivedSolutions :: Labyrinth -> [Labyrinth]
@@ -93,6 +94,9 @@ printLabyrinth lab =
 at :: Labyrinth -> (Int,Int) -> Value
 at lab = M.at (matrix lab)
 
+firstRow :: Labyrinth -> [Value]
+firstRow lab = matrix lab |> M.row 1 
+
 dimensions :: Labyrinth -> (Int,Int)
 dimensions lab = matrix lab |> M.dimensions 
 
@@ -108,5 +112,5 @@ stripChars :: String -> String -> String
 stripChars = filter . flip notElem
 
 compareBy :: Ord a => (b -> a) -> b -> b -> Ordering
-compareBy fn l1 l2 =  compare (fn l1) (fn l2)
+compareBy fn l1 l2 =  compare (fn l1) (fn l2) 
 
