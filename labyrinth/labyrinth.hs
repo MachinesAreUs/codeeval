@@ -4,15 +4,63 @@ import Data.Char
 import Data.List
 import qualified Numeric.Matrix as M
 
--- General purpose stuff
+-- Main Definitions
 
-(|>) = flip ($)
+type Value = Int
 
-compareBy :: Ord a => (b -> a) -> b -> b -> Ordering
-compareBy fn l1 l2 =  compare (fn l1) (fn l2)
+data Labyrinth = Labyrinth { matrix :: M.Matrix Value
+                           , steps :: [(Int,Int)]
+                           } deriving (Show)
 
-stripChars :: String -> String -> String
-stripChars = filter . flip notElem
+empty = 0
+wall  = 1
+step  = 2
+
+-- Algorithm
+
+neighbors :: (Int, Int) -> (Int, Int) -> [(Int,Int)] 
+neighbors (rows,cols) (r,c) = 
+  [(r,c-1),(r,c+1),(r-1,c),(r+1,c)] |> 
+    filter (\(r,c) -> r >= 1 && r <= rows && c >= 1 && c <= cols)
+
+possibleMoves :: Labyrinth -> (Int,Int) -> [(Int,Int)]
+possibleMoves lab pos =
+  neighbors (dimensions lab) pos |> filter isEmpty
+  where isEmpty p = at lab p == empty
+
+allSolutions :: Labyrinth -> [Labyrinth]
+allSolutions x = firstSolution x |> derivedSolutions
+
+firstSolution :: Labyrinth -> Labyrinth
+firstSolution s = Labyrinth {matrix = newMatrix, steps = [(1,fstCol)] } 
+  where (rows,cols) = dimensions s
+        fstCol      = (div cols 2) + (mod cols 2) -- Not so good!
+        newMatrix   = changeValue (matrix s) (1,fstCol) step
+
+derivedSolutions :: Labyrinth -> [Labyrinth]
+derivedSolutions lab = 
+  if reachedBottom
+  then [lab]
+  else last st |> possibleMoves lab 
+               |> map newPath 
+               |> concatMap derivedSolutions
+  where 
+    reachedBottom = steps lab |> last |> fst == rows 
+    (rows,cols)   = dimensions lab
+    st            = steps lab
+    newPath (x,y) = Labyrinth { matrix = changeValue (matrix lab) (x,y) step
+                              , steps = st ++ [(x,y)]
+                              }
+
+solutionLength :: Labyrinth -> Int
+solutionLength lab = steps lab |> length
+
+main = do
+  args <- getArgs
+  lab  <- readLabyrinth $ head args
+  let solutions = allSolutions lab
+      shortest = minimumBy (compareBy solutionLength) solutions
+  printLabyrinth shortest
 
 -- Matrix implementation specific plumbing
 
@@ -50,65 +98,15 @@ dimensions lab = matrix lab |> M.dimensions
 
 changeValue :: M.Matrix Int -> (Int,Int) -> Int -> M.Matrix Int
 changeValue m (r,c) v = M.mapWithIndex mapper m
-  where mapper (row,col) e = if row == r && col == c
-                             then v
-                             else e
+  where mapper (row,col) e = if row == r && col == c then v else e
 
--- Main Definitions
+-- General purpose stuff
 
-type Value = Int
+(|>) = flip ($)
 
-data Labyrinth = Labyrinth { matrix :: M.Matrix Value
-                           , steps :: [(Int,Int)]
-                           } deriving (Show)
+stripChars :: String -> String -> String
+stripChars = filter . flip notElem
 
-empty = 0
-wall  = 1
-step  = 2
-
--- Algorithm
-
-neighbors :: (Int, Int) -> (Int, Int) -> [(Int,Int)] 
-neighbors (rows,cols) (r,c) = 
-  [(r,c-1),(r,c+1),(r-1,c),(r+1,c)] |> 
-    filter (\(r,c) -> r >= 1 && r <= rows && c >= 1 && c <= cols)
-
-possibleMoves :: Labyrinth -> (Int,Int) -> [(Int,Int)]
-possibleMoves lab pos =
-  neighbors (dimensions lab) pos |> filter isEmpty
-  where isEmpty p = at lab p == empty
-
-allSolutions :: Labyrinth -> [Labyrinth]
-allSolutions x = firstSolution x |> derivedSolutions
-
-firstSolution :: Labyrinth -> Labyrinth
-firstSolution s = Labyrinth {matrix = newMatrix, steps = [(1,fstCol)] } 
-  where (rows,cols)    = dimensions s
-        fstCol         = (div cols 2) + (mod cols 2) -- Not so good!
-        newMatrix      = changeValue (matrix s) (1,fstCol) step
-
-derivedSolutions :: Labyrinth -> [Labyrinth]
-derivedSolutions lab = 
-  if reachedBottom
-    then [lab]
-    else last st |> possibleMoves lab 
-                 |> map newPath 
-                 |> concatMap derivedSolutions
-  where 
-    reachedBottom = steps lab |> last |> fst == rows 
-    (rows,cols)   = dimensions lab
-    st            = steps lab
-    newPath (x,y) = Labyrinth { matrix = changeValue (matrix lab) (x,y) step
-                              , steps = st ++ [(x,y)]
-                              }
-
-solutionLength :: Labyrinth -> Int
-solutionLength lab = steps lab |> length
-
-main = do
-  args <- getArgs
-  lab  <- readLabyrinth $ head args
-  let solutions = allSolutions lab
-      shortest = minimumBy (compareBy solutionLength) solutions
-  printLabyrinth shortest -- shortest / solutions
+compareBy :: Ord a => (b -> a) -> b -> b -> Ordering
+compareBy fn l1 l2 =  compare (fn l1) (fn l2)
 
