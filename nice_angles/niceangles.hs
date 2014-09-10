@@ -9,7 +9,7 @@ readInputs filePath = do
 
 niceAngle :: String -> String
 niceAngle s = intPart ++ "." ++ angleFractionalPart
-  where (intPart:decPart:[]) = splitOn "." s
+  where [intPart,decPart] = splitOn "." s
         angleFractionalPart  = toAngle fullFractional
         fullFractional       = "0." ++ decPart
 
@@ -20,13 +20,13 @@ toAngle s = minutesPart ++ "'" ++ secondsPart ++ "''"
         minAngleStr       = toAngleDecStr s
         scndAngleStr      = toAngleDecStr fractionalScndStr
         toAngleDecStr x   = printf "%023.20f" $ toDouble x * 60
-        fractionalScndStr = "0." ++ (fractionalPart minAngleStr)
+        fractionalScndStr = "0." ++ fractionalPart minAngleStr
         intPart x         = head $ parts x
         fractionalPart x  = last $ parts x
-        parts x           = splitOn "." x
-        toDouble x        = (read x) :: Double
+        parts             = splitOn "."
+        toDouble x        = read x :: Double
 
 main = do
   args   <- getArgs
   inputs <- readInputs $ head args
-  mapM putStrLn $ map niceAngle inputs
+  mapM (putStrLn . niceAngle) inputs
