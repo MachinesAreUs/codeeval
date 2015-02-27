@@ -7,7 +7,7 @@ main = let
   maxSum list       = maximum $ map sum $ allSubLists list
   allSubLists list  = [take x sub | sub <- subLists list, x <- [1..(length sub)]]
   subLists list     = [drop y list | y <- [0..length list-1]]
-	in do
+  in do
     argv <- getArgs
     fileStr <- readFile $ head argv
     let samples = map toIntArray $ lines fileStr 
