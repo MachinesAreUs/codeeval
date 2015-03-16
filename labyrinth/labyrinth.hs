@@ -3,7 +3,8 @@ import System.IO
 import Data.Char
 import Data.List
 import Data.Maybe
-import qualified Numeric.Matrix as M
+import qualified Data.Matrix as M
+import qualified Data.Vector as V
 
 -- Main Definitions
 
@@ -82,7 +83,7 @@ readLabyrinth filePath = do
   str <- readFile filePath
   let rows = map toIntChar str |> lines 
                                |> map (map digitToInt) 
-      mtx  = M.fromList rows :: M.Matrix Int
+      mtx  = M.fromLists rows :: M.Matrix Int
   return Labyrinth {matrix = mtx, steps = []}
 
 printLabyrinth lab = 
@@ -92,17 +93,18 @@ printLabyrinth lab =
              |> putStr
 
 at :: Labyrinth -> (Int,Int) -> Value
-at lab = M.at (matrix lab)
+at lab (r,c) = M.getElem r c (matrix lab)
 
 firstRow :: Labyrinth -> [Value]
-firstRow lab = matrix lab |> M.row 1 
+firstRow lab = matrix lab |> M.getRow 1 |> V.toList
 
 dimensions :: Labyrinth -> (Int,Int)
-dimensions lab = matrix lab |> M.dimensions 
+dimensions lab = 
+  let mtx = matrix lab 
+  in (M.nrows mtx, M.ncols mtx)
 
 changeValue :: M.Matrix Int -> (Int,Int) -> Int -> M.Matrix Int
-changeValue m (r,c) v = M.mapWithIndex mapper m
-  where mapper (row,col) e = if row == r && col == c then v else e
+changeValue m (r,c) v = M.setElem v (r,c) m
 
 -- General purpose stuff
 
