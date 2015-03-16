@@ -6,16 +6,16 @@ import Data.Maybe
 
 -- Definitions
 
-type Value = Int
+type Value = Char
 type Matrix a = [[a]]
 
 data Labyrinth = Labyrinth { matrix :: Matrix Value
                            , steps :: [(Int,Int)]
                            } deriving (Show)
 
-empty = 0
-wall  = 1
-step  = 2
+empty = ' '
+wall  = '*'
+step  = '+'
 
 -- Algorithm
 
@@ -35,7 +35,7 @@ allSolutions x = firstSolution x |> derivedSolutions
 firstSolution :: Labyrinth -> Labyrinth
 firstSolution s = Labyrinth {matrix = newMatrix, steps = [(0,fstCol)] } 
   where (rows,cols) = dimensions s
-        fstCol      = firstRow s |> elemIndex empty |> fromJust -- |> (+) 1
+        fstCol      = firstRow s |> elemIndex empty |> fromJust
         newMatrix   = changeValue (matrix s) (0,fstCol) step
 
 derivedSolutions :: Labyrinth -> [Labyrinth]
@@ -65,31 +65,17 @@ main = do
 
 -- Matrix implementation specific plumbing
 
-toIntChar :: Char -> Char
-toIntChar ' ' = '0'
-toIntChar '*' = '1'
-toIntChar '+' = '2'
-toIntChar c   = c
-
-toMapChar :: Int -> Char
-toMapChar 0 = ' '
-toMapChar 1 = '*'
-toMapChar 2 = '+'
-
 readLabyrinth :: String -> IO Labyrinth
 readLabyrinth filePath = do
   str <- readFile filePath
-  let rows = map toIntChar str |> lines 
-                               |> map (map digitToInt) 
+  let rows = lines str
   return Labyrinth {matrix = rows, steps = []}
 
 printLabyrinth lab = 
-  matrix lab |> map (map toMapChar) 
-             |> unlines
-             |> putStr
+  matrix lab |> unlines |> putStr
 
 at :: Labyrinth -> (Int,Int) -> Value
-at lab (r,c) = ((matrix lab) !! r) !! c 
+at lab (r,c) = (matrix lab !! r) !! c 
 
 firstRow :: Labyrinth -> [Value]
 firstRow lab = matrix lab |> head
