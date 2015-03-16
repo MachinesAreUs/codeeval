@@ -3,14 +3,13 @@ import System.IO
 import Data.Char
 import Data.List
 import Data.Maybe
-import qualified Data.Matrix as M
-import qualified Data.Vector as V
 
--- Main Definitions
+-- Definitions
 
 type Value = Int
+type Matrix a = [[a]]
 
-data Labyrinth = Labyrinth { matrix :: M.Matrix Value
+data Labyrinth = Labyrinth { matrix :: Matrix Value
                            , steps :: [(Int,Int)]
                            } deriving (Show)
 
@@ -23,7 +22,7 @@ step  = 2
 neighbors :: (Int, Int) -> (Int, Int) -> [(Int,Int)] 
 neighbors (rows,cols) (r,c) = 
   [(r,c-1),(r,c+1),(r-1,c),(r+1,c)] |> 
-    filter (\(r,c) -> r >= 1 && r <= rows && c >= 1 && c <= cols)
+    filter (\(r,c) -> r >= 0 && r < rows && c >= 0 && c < cols)
 
 possibleMoves :: Labyrinth -> (Int,Int) -> [(Int,Int)]
 possibleMoves lab pos =
@@ -34,10 +33,10 @@ allSolutions :: Labyrinth -> [Labyrinth]
 allSolutions x = firstSolution x |> derivedSolutions
 
 firstSolution :: Labyrinth -> Labyrinth
-firstSolution s = Labyrinth {matrix = newMatrix, steps = [(1,fstCol)] } 
+firstSolution s = Labyrinth {matrix = newMatrix, steps = [(0,fstCol)] } 
   where (rows,cols) = dimensions s
-        fstCol      = firstRow s |> elemIndex empty |> fromJust |> (+) 1
-        newMatrix   = changeValue (matrix s) (1,fstCol) step
+        fstCol      = firstRow s |> elemIndex empty |> fromJust -- |> (+) 1
+        newMatrix   = changeValue (matrix s) (0,fstCol) step
 
 derivedSolutions :: Labyrinth -> [Labyrinth]
 derivedSolutions lab = 
@@ -47,7 +46,7 @@ derivedSolutions lab =
                |> map newPath 
                |> concatMap derivedSolutions
   where 
-    reachedBottom = steps lab |> last |> fst == rows 
+    reachedBottom = steps lab |> last |> fst == rows - 1 
     (rows,cols)   = dimensions lab
     st            = steps lab
     newPath (x,y) = Labyrinth { matrix = changeValue (matrix lab) (x,y) step
@@ -72,47 +71,45 @@ toIntChar '*' = '1'
 toIntChar '+' = '2'
 toIntChar c   = c
 
-toMapChar :: Char -> Char
-toMapChar '0' = ' '
-toMapChar '1' = '*'
-toMapChar '2' = '+'
-toMapChar c = c
+toMapChar :: Int -> Char
+toMapChar 0 = ' '
+toMapChar 1 = '*'
+toMapChar 2 = '+'
 
 readLabyrinth :: String -> IO Labyrinth
 readLabyrinth filePath = do
   str <- readFile filePath
   let rows = map toIntChar str |> lines 
                                |> map (map digitToInt) 
-      mtx  = M.fromLists rows :: M.Matrix Int
-  return Labyrinth {matrix = mtx, steps = []}
+  return Labyrinth {matrix = rows, steps = []}
 
 printLabyrinth lab = 
-  matrix lab |> show 
-             |> stripChars " "
-             |> map toMapChar 
+  matrix lab |> map (map toMapChar) 
+             |> unlines
              |> putStr
 
 at :: Labyrinth -> (Int,Int) -> Value
-at lab (r,c) = M.getElem r c (matrix lab)
+at lab (r,c) = ((matrix lab) !! r) !! c 
 
 firstRow :: Labyrinth -> [Value]
-firstRow lab = matrix lab |> M.getRow 1 |> V.toList
+firstRow lab = matrix lab |> head
 
 dimensions :: Labyrinth -> (Int,Int)
 dimensions lab = 
-  let mtx = matrix lab 
-  in (M.nrows mtx, M.ncols mtx)
+  let mtx = matrix lab
+  in (length mtx, length (head mtx))
 
-changeValue :: M.Matrix Int -> (Int,Int) -> Int -> M.Matrix Int
-changeValue m (r,c) v = M.setElem v (r,c) m
+changeValue :: Matrix a -> (Int,Int) -> a -> Matrix a
+changeValue mat (r,c) v = 
+  let (upperRows, thisRow : lowerRows ) = splitAt r mat
+      (leftCells, thisCell : rightCells) = splitAt c thisRow
+  in upperRows ++ (leftCells ++ v : rightCells) : lowerRows
 
 -- General purpose stuff
 
 (|>) = flip ($)
 
-stripChars :: String -> String -> String
-stripChars = filter . flip notElem
-
 compareBy :: Ord a => (b -> a) -> b -> b -> Ordering
-compareBy fn l1 l2 =  compare (fn l1) (fn l2) 
+compareBy fn l1 l2 = compare (fn l1) (fn l2) 
+
 
