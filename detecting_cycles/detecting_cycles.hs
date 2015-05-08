@@ -11,7 +11,7 @@ readLines filePath = do
 detectCycle :: String -> String
 detectCycle s = toIntArray s |> detectCycle_a |> toString
   where toIntArray s = words s |> map (\x -> read x :: Int)
-        toString a   = map show a |> intercalate " "
+        toString a   = map show a |> unwords
 
 -- This is cheating, but it worked! ;-)
 -- I just betted their examples wouldn't account for complex cycles 
@@ -20,10 +20,10 @@ detectCycle s = toIntArray s |> detectCycle_a |> toString
 -- should be 2 3 1 6 5 1
 detectCycle_a :: [Int] -> [Int]
 detectCycle_a [] = []
-detectCycle_a (x:[]) = []
+detectCycle_a [x] = []
 detectCycle_a a = 
   let (x:xs) = reverse a
-      subseq = (span (\t -> t /= x) xs |> fst )
+      subseq = (span (/= x) xs |> fst )
   in (x:subseq) |> reverse
 
 main = do
